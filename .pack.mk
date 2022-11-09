@@ -22,17 +22,25 @@ ifeq (${VERSION}, $(filter ${VERSION}, 1.10))
 endif
 
 prepare:
-	rm -rf build packpack
-	git clone https://github.com/packpack/packpack.git
+#	rm -rf build packpack
+#	git clone https://github.com/packpack/packpack.git
 
 package: prepare
 	if [ "${TARANTOOL_SERIES}" != "1.10" ]; then \
 		if [ -n "${GIT_TAG}" ]; then \
 			export VERSION="$$(echo ${GIT_TAG} | sed 's/-/~/')"; \
 		else \
-			export VERSION="$$(echo ${GIT_DESCRIBE} | sed ${SED_REPLACE_VERSION_REGEX} | sed 's/-/~/').dev"; \
+			if [ "${OS}" = "alpine" ]; then \
+				if git describe --abbrev=0 | grep -q "entrypoint" ; then \
+					export VERSION="$$(echo ${GIT_DESCRIBE} | cut -d- -f1)_alpha0" ; \
+					export RELEASE="$$(echo ${GIT_DESCRIBE} | cut -d- -f3)" ; \
+				else \
+					export VERSION="$$(echo ${GIT_DESCRIBE} | sed ${SED_REPLACE_VERSION_REGEX} | sed 's/-/~/')"; \
+				fi; \
+			else \
+				export VERSION="$$(echo ${GIT_DESCRIBE} | sed ${SED_REPLACE_VERSION_REGEX} | sed 's/-/~/').dev"; \
+			fi; \
 		fi; \
-		echo VERSION=$${VERSION}; \
 	fi; \
 	PACKPACK_EXTRA_DOCKER_RUN_PARAMS="--network=host --volume ${VARDIR}:${VARDIR} ${PACKPACK_EXTRA_DOCKER_RUN_PARAMS}" \
 	TARBALL_EXTRA_ARGS="--exclude=*.exe --exclude=*.dll" \
